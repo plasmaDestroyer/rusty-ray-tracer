@@ -2,13 +2,18 @@ mod color;
 mod hittable;
 mod hittable_list;
 mod ray;
+mod rtweekend;
 mod sphere;
 mod vec3;
 
 use color::Color;
 use color::write_color;
+use hittable::Hittable;
+use hittable_list::HittableList;
 use ray::Ray;
+use sphere::Sphere;
 use std::io::Write;
+use std::sync::Arc;
 use vec3::Point3;
 use vec3::Vec3;
 use vec3::dot;
@@ -28,11 +33,9 @@ fn hit_sphere(center: &Point3, radius: f64, r: &Ray) -> f64 {
     }
 }
 
-fn ray_color(r: &Ray) -> Color {
-    let t = hit_sphere(&Point3::new(0.0, 0.0, -1.0), 0.5, r);
-    if t > 0.0 {
-        let n: Vec3 = unit_vector(&(r.at(t) - Vec3::new(0.0, 0.0, -1.0)));
-        return 0.5 * Color::new(n.x() + 1.0, n.y() + 1.0, n.z() + 1.0);
+fn ray_color(r: &Ray, world: &dyn Hittable) -> Color {
+    if let Some(rec) = world.hit(r, 0.0, f64::INFINITY) {
+        return (rec.normal + Color::new(1.0, 1.0, 1.0)) * 0.5;
     }
 
     let unit_direction = unit_vector(r.direction());
@@ -49,6 +52,16 @@ fn main() {
     // Calculate the image height, and ensure that it's at least 1.
     let mut image_height: u32 = (image_width as f64 / aspect_ratio) as u32;
     image_height = if image_height < 1 { 1 } else { image_height };
+
+    // World
+
+    let mut world = HittableList::new();
+
+    world.add(Arc::new(Sphere::new(&Point3::new(0.0, 0.0, -1.0), 0.5)));
+    world.add(Arc::new(Sphere::new(
+        &Point3::new(0.0, -100.5, -1.0),
+        100.0,
+    )));
 
     // Camera
 
@@ -82,7 +95,7 @@ fn main() {
             let ray_direction = pixel_center - camera_center;
             let r = Ray::new(camera_center, ray_direction);
 
-            let pixel_color = ray_color(&r);
+            let pixel_color = ray_color(&r, &world);
             write_color(&mut std::io::stdout(), &pixel_color);
         }
     }
