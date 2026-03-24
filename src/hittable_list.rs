@@ -31,13 +31,12 @@ impl Hittable for HittableList {
                     min: ray_t.min,
                     max: closest_so_far,
                 },
-            ) {
-                if temp_rec.t < closest_so_far {
+            ) && temp_rec.t < closest_so_far
+            {
                     closest_so_far = temp_rec.t;
                     closest_hit = Some(temp_rec);
                 }
             }
-        }
         closest_hit
     }
 }

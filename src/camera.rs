@@ -3,21 +3,23 @@ use crate::color::write_color;
 use crate::hittable::Hittable;
 use crate::interval::Interval;
 use crate::ray::Ray;
+use crate::rtweekend::random_f64;
 use crate::vec3::Point3;
 use crate::vec3::Vec3;
 use crate::vec3::unit_vector;
 
 use std::io::Write;
 
-#[derive(Default)]
 pub struct Camera {
-    pub aspect_ratio: f64, // Ratio of image width over height
-    pub image_width: u32,  // Rendered image width in pixel count
-    image_height: u32,     // Rendered image height
-    center: Point3,        // Camera center
-    pixel00_loc: Point3,   // Location of pixel 0, 0
-    pixel_delta_u: Vec3,   // Offset to pixel to the right
-    pixel_delta_v: Vec3,   // Offset to pixel below
+    pub aspect_ratio: f64,      // Ratio of image width over height
+    pub image_width: u32,       // Rendered image width in pixel count
+    pub samples_per_pixel: u32, // Count of random samples for each pixel
+    image_height: u32,          // Rendered image height
+    pixel_samples_scale: f64,   // Color scale factor for a sum of pixel samples
+    center: Point3,             // Camera center
+    pixel00_loc: Point3,        // Location of pixel 0, 0
+    pixel_delta_u: Vec3,        // Offset to pixel to the right
+    pixel_delta_v: Vec3,        // Offset to pixel below
 }
 
 impl Camera {
@@ -29,6 +31,8 @@ impl Camera {
         } else {
             self.image_height
         };
+
+        self.pixel_samples_scale = 1.0 / self.samples_per_pixel as f64;
 
         self.center = Point3::new(0.0, 0.0, 0.0);
 
@@ -52,6 +56,26 @@ impl Camera {
         self.pixel00_loc = viewport_upper_left + 0.5 * (self.pixel_delta_u + self.pixel_delta_v);
     }
 
+    fn get_ray(&self, i: u32, j: u32) -> Ray {
+        // Construct a camera ray originating from the origin and directed at randomly sampled
+        // point around the pixel location i, j.
+
+        let offset = Camera::sample_square();
+        let pixel_sample = self.pixel00_loc
+            + ((i as f64 + offset.x()) * self.pixel_delta_u)
+            + ((j as f64 + offset.y()) * self.pixel_delta_v);
+
+        let ray_origin = self.center;
+        let ray_direction = pixel_sample - ray_origin;
+
+        Ray::new(ray_origin, ray_direction)
+    }
+
+    fn sample_square() -> Vec3 {
+        // Returns the vector to a random point in the [-.5,-.5]-[+.5,+.5] unit square.
+        Vec3::new(random_f64() - 0.5, random_f64() - 0.5, 0.0)
+    }
+
     pub fn render(&mut self, world: &dyn Hittable) {
         self.initialize();
 
@@ -61,14 +85,12 @@ impl Camera {
             eprint!("\rScanlines remaining: {} ", self.image_height - j);
             std::io::stderr().flush().unwrap();
             for i in 0..self.image_width {
-                let pixel_center = self.pixel00_loc
-                    + (i as f64 * self.pixel_delta_u)
-                    + (j as f64 * self.pixel_delta_v);
-                let ray_direction = pixel_center - self.center;
-                let r = Ray::new(self.center, ray_direction);
-
-                let pixel_color = Camera::ray_color(&r, world);
-                write_color(&mut std::io::stdout(), &pixel_color);
+                let mut pixel_color = Color::new(0.0, 0.0, 0.0);
+                for _ in 0..self.samples_per_pixel {
+                    let r = Camera::get_ray(self, i, j);
+                    pixel_color += Camera::ray_color(&r, world);
+                }
+                write_color(&mut std::io::stdout(), &(pixel_color * self.pixel_samples_scale));
             }
         }
 
@@ -83,5 +105,21 @@ impl Camera {
         let unit_direction = unit_vector(r.direction());
         let a = 0.5 * (unit_direction.y() + 1.0);
         (1.0 - a) * Color::new(1.0, 1.0, 1.0) + a * Color::new(0.5, 0.7, 1.0)
+    }
+}
+
+impl Default for Camera {
+    fn default() -> Self {
+        Self {
+            aspect_ratio: 1.0,
+            image_width: 100,
+            samples_per_pixel: 10,
+            image_height: 0,
+            pixel_samples_scale: 0.0,
+            center: Point3::default(),
+            pixel00_loc: Point3::default(),
+            pixel_delta_u: Vec3::default(),
+            pixel_delta_v: Vec3::default(),
+        }
     }
 }
