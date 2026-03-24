@@ -1,6 +1,7 @@
 mod color;
 mod hittable;
 mod hittable_list;
+mod interval;
 mod ray;
 mod rtweekend;
 mod sphere;
@@ -10,31 +11,17 @@ use color::Color;
 use color::write_color;
 use hittable::Hittable;
 use hittable_list::HittableList;
+use interval::Interval;
 use ray::Ray;
 use sphere::Sphere;
 use std::io::Write;
 use std::sync::Arc;
 use vec3::Point3;
 use vec3::Vec3;
-use vec3::dot;
 use vec3::unit_vector;
 
-fn hit_sphere(center: &Point3, radius: f64, r: &Ray) -> f64 {
-    let oc = *center - *r.origin();
-    let a = r.direction().length_squared();
-    let h = dot(r.direction(), &oc);
-    let c = oc.length_squared() - radius * radius;
-    let discriminant = h * h - a * c;
-
-    if discriminant < 0.0 {
-        -1.0
-    } else {
-        (h - discriminant.sqrt()) / a
-    }
-}
-
 fn ray_color(r: &Ray, world: &dyn Hittable) -> Color {
-    if let Some(rec) = world.hit(r, 0.0, f64::INFINITY) {
+    if let Some(rec) = world.hit(r, &Interval::new(0.0, f64::INFINITY)) {
         return (rec.normal + Color::new(1.0, 1.0, 1.0)) * 0.5;
     }
 
