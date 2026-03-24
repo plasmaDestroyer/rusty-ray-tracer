@@ -15,6 +15,7 @@ pub struct Camera {
     pub aspect_ratio: f64,      // Ratio of image width over height
     pub image_width: u32,       // Rendered image width in pixel count
     pub samples_per_pixel: u32, // Count of random samples for each pixel
+    pub max_depth: u32,         // Maximum number of ray bounces into scene
     image_height: u32,          // Rendered image height
     pixel_samples_scale: f64,   // Color scale factor for a sum of pixel samples
     center: Point3,             // Camera center
@@ -89,7 +90,7 @@ impl Camera {
                 let mut pixel_color = Color::new(0.0, 0.0, 0.0);
                 for _ in 0..self.samples_per_pixel {
                     let r = Camera::get_ray(self, i, j);
-                    pixel_color += Camera::ray_color(self, &r, world);
+                    pixel_color += Camera::ray_color(self, &r, self.max_depth, world);
                 }
                 write_color(
                     &mut std::io::stdout(),
@@ -101,10 +102,15 @@ impl Camera {
         eprintln!("\rDone.                 ");
     }
 
-    fn ray_color(&self, r: &Ray, world: &dyn Hittable) -> Color {
+    fn ray_color(&self, r: &Ray, depth: u32, world: &dyn Hittable) -> Color {
+        // If we've exceeded the ray bounce limit, no more light is gathered.
+        if (depth <= 0) {
+            return Color::new(0.0, 0.0, 0.0);
+        }
+
         if let Some(rec) = world.hit(r, &Interval::new(0.0, f64::INFINITY)) {
             let direction = random_on_hemisphere(&rec.normal);
-            return self.ray_color(&Ray::new(rec.p, direction), world) * 0.5;
+            return self.ray_color(&Ray::new(rec.p, direction), depth - 1, world) * 0.5;
         }
 
         let unit_direction = unit_vector(r.direction());
@@ -119,6 +125,7 @@ impl Default for Camera {
             aspect_ratio: 1.0,
             image_width: 100,
             samples_per_pixel: 10,
+            max_depth: 10,
             image_height: 0,
             pixel_samples_scale: 0.0,
             center: Point3::default(),
