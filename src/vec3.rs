@@ -1,3 +1,4 @@
+use crate::rtweekend::random_f64;
 use std::ops::{Add, AddAssign, Div, DivAssign, Mul, MulAssign, Neg, Sub, SubAssign};
 
 #[derive(Default, Clone, Copy)]
@@ -30,6 +31,18 @@ impl Vec3 {
 
     pub fn length(&self) -> f64 {
         self.length_squared().sqrt()
+    }
+
+    pub fn random() -> Self {
+        Vec3::new(random_f64(), random_f64(), random_f64())
+    }
+
+    pub fn random_range(min: f64, max: f64) -> Self {
+        Vec3::new(
+            random_f64() * (max - min) + min,
+            random_f64() * (max - min) + min,
+            random_f64() * (max - min) + min,
+        )
     }
 }
 
@@ -167,4 +180,23 @@ pub fn cross(u: &Vec3, v: &Vec3) -> Vec3 {
 
 pub fn unit_vector(v: &Vec3) -> Vec3 {
     *v / v.length()
+}
+
+pub fn random_unit_vector() -> Vec3 {
+    loop {
+        let p = Vec3::random_range(-1.0, 1.0);
+        let lensq = p.length_squared();
+        if 1e-160 < lensq && lensq <= 1.0 {
+            return p / lensq.sqrt();
+        }
+    }
+}
+
+pub fn random_on_hemisphere(normal: &Vec3) -> Vec3 {
+    let on_unit_sphere = random_unit_vector();
+    if dot(normal, &on_unit_sphere) > 0.0 {
+        on_unit_sphere
+    } else {
+        -on_unit_sphere
+    }
 }

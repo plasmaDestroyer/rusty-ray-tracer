@@ -6,6 +6,7 @@ use crate::ray::Ray;
 use crate::rtweekend::random_f64;
 use crate::vec3::Point3;
 use crate::vec3::Vec3;
+use crate::vec3::random_on_hemisphere;
 use crate::vec3::unit_vector;
 
 use std::io::Write;
@@ -88,18 +89,22 @@ impl Camera {
                 let mut pixel_color = Color::new(0.0, 0.0, 0.0);
                 for _ in 0..self.samples_per_pixel {
                     let r = Camera::get_ray(self, i, j);
-                    pixel_color += Camera::ray_color(&r, world);
+                    pixel_color += Camera::ray_color(self, &r, world);
                 }
-                write_color(&mut std::io::stdout(), &(pixel_color * self.pixel_samples_scale));
+                write_color(
+                    &mut std::io::stdout(),
+                    &(pixel_color * self.pixel_samples_scale),
+                );
             }
         }
 
         eprintln!("\rDone.                 ");
     }
 
-    fn ray_color(r: &Ray, world: &dyn Hittable) -> Color {
+    fn ray_color(&self, r: &Ray, world: &dyn Hittable) -> Color {
         if let Some(rec) = world.hit(r, &Interval::new(0.0, f64::INFINITY)) {
-            return (rec.normal + Color::new(1.0, 1.0, 1.0)) * 0.5;
+            let direction = random_on_hemisphere(&rec.normal);
+            return self.ray_color(&Ray::new(rec.p, direction), world) * 0.5;
         }
 
         let unit_direction = unit_vector(r.direction());
