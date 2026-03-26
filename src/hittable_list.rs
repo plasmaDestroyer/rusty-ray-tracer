@@ -2,10 +2,11 @@ use crate::hittable::HitRecord;
 use crate::hittable::Hittable;
 use crate::interval::Interval;
 use crate::ray::Ray;
-use std::sync::Arc;
+use std::rc::Rc;
 
+#[derive(Default)]
 pub struct HittableList {
-    objects: Vec<Arc<dyn Hittable>>,
+    objects: Vec<Rc<dyn Hittable>>,
 }
 
 impl HittableList {
@@ -15,7 +16,7 @@ impl HittableList {
         }
     }
 
-    pub fn add(&mut self, object: Arc<dyn Hittable>) {
+    pub fn add(&mut self, object: Rc<dyn Hittable>) {
         self.objects.push(object);
     }
 }
@@ -33,10 +34,10 @@ impl Hittable for HittableList {
                 },
             ) && temp_rec.t < closest_so_far
             {
-                    closest_so_far = temp_rec.t;
-                    closest_hit = Some(temp_rec);
-                }
+                closest_so_far = temp_rec.t;
+                closest_hit = Some(temp_rec);
             }
+        }
         closest_hit
     }
 }

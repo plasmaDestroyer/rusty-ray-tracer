@@ -1,12 +1,15 @@
 use crate::interval::Interval;
+use crate::material::Material;
 use crate::ray::Ray;
 use crate::vec3::Point3;
 use crate::vec3::Vec3;
 use crate::vec3::dot;
+use std::rc::Rc;
 
 pub struct HitRecord {
     pub p: Point3,
     pub normal: Vec3,
+    pub mat: Rc<dyn Material>,
     pub t: f64,
     pub front_face: bool,
 }
@@ -20,7 +23,7 @@ impl HitRecord {
         self.normal = if self.front_face {
             *outward_normal
         } else {
-            -(*outward_normal)
+            -*outward_normal
         };
     }
 }

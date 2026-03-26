@@ -6,7 +6,6 @@ use crate::ray::Ray;
 use crate::rtweekend::random_f64;
 use crate::vec3::Point3;
 use crate::vec3::Vec3;
-use crate::vec3::random_unit_vector;
 use crate::vec3::unit_vector;
 
 use std::io::Write;
@@ -28,11 +27,7 @@ impl Camera {
     fn initialize(&mut self) {
         // Calculate the image height, and ensure that it's at least 1.
         self.image_height = (self.image_width as f64 / self.aspect_ratio) as u32;
-        self.image_height = if self.image_height < 1 {
-            1
-        } else {
-            self.image_height
-        };
+        self.image_height = self.image_height.max(1);
 
         self.pixel_samples_scale = 1.0 / self.samples_per_pixel as f64;
 
@@ -89,8 +84,8 @@ impl Camera {
             for i in 0..self.image_width {
                 let mut pixel_color = Color::new(0.0, 0.0, 0.0);
                 for _ in 0..self.samples_per_pixel {
-                    let r = Camera::get_ray(self, i, j);
-                    pixel_color += Camera::ray_color(self, &r, self.max_depth, world);
+                    let r = self.get_ray(i, j);
+                    pixel_color += self.ray_color(&r, self.max_depth, world);
                 }
                 write_color(
                     &mut std::io::stdout(),
@@ -104,13 +99,15 @@ impl Camera {
 
     fn ray_color(&self, r: &Ray, depth: u32, world: &dyn Hittable) -> Color {
         // If we've exceeded the ray bounce limit, no more light is gathered.
-        if depth <= 0 {
+        if depth == 0 {
             return Color::new(0.0, 0.0, 0.0);
         }
 
         if let Some(rec) = world.hit(r, &Interval::new(0.001, f64::INFINITY)) {
-            let direction = rec.normal + random_unit_vector();
-            return self.ray_color(&Ray::new(rec.p, direction), depth - 1, world) * 0.5;
+            if let Some((attenuation, scattered)) = rec.mat.scatter(r, &rec) {
+                return attenuation * self.ray_color(&scattered, depth - 1, world);
+            }
+            return Color::new(0.0, 0.0, 0.0);
         }
 
         let unit_direction = unit_vector(r.direction());

@@ -44,6 +44,12 @@ impl Vec3 {
             random_f64() * (max - min) + min,
         )
     }
+
+    pub fn near_zero(&self) -> bool {
+        // Return true if the vector is close to zero in all dimensions.
+        let s = 1e-8;
+        (self.x.abs() < s) && (self.y.abs() < s) && (self.z.abs() < s)
+    }
 }
 
 pub type Point3 = Vec3;
@@ -199,4 +205,8 @@ pub fn random_on_hemisphere(normal: &Vec3) -> Vec3 {
     } else {
         -on_unit_sphere
     }
+}
+
+pub fn reflect(v: &Vec3, n: &Vec3) -> Vec3 {
+    *v - *n * dot(v, n) * 2.0
 }
