@@ -3,6 +3,8 @@ use crate::hittable::HitRecord;
 use crate::ray::Ray;
 use crate::vec3::random_unit_vector;
 use crate::vec3::reflect;
+use crate::vec3::refract;
+use crate::vec3::unit_vector;
 
 pub trait Material {
     fn scatter(&self, r_in: &Ray, rec: &HitRecord) -> Option<(Color, Ray)>;
@@ -52,6 +54,36 @@ impl Material for Metal {
         let reflected = reflect(r_in.direction(), &rec.normal);
         let scattered = Ray::new(rec.p, reflected + self.fuzz * random_unit_vector());
         let attenuation = self.albedo;
+        Some((attenuation, scattered))
+    }
+}
+
+pub struct Dielectric {
+    // Refractive index in vacuum or air, or the ratio of the material's refractive index over
+    // the refractive index of the enclosing media
+    refraction_index: f64,
+}
+
+impl Dielectric {
+    pub fn new(refraction_index: f64) -> Self {
+        Self { refraction_index }
+    }
+}
+
+impl Material for Dielectric {
+    fn scatter(&self, r_in: &Ray, rec: &HitRecord) -> Option<(Color, Ray)> {
+        let attenuation = Color::new(1.0, 1.0, 1.0);
+        let ri = if rec.front_face {
+            1.0 / self.refraction_index
+        } else {
+            self.refraction_index
+        };
+
+        let unit_direction = unit_vector(r_in.direction());
+        let refracted = refract(&unit_direction, &rec.normal, ri);
+
+        let scattered = Ray::new(rec.p, refracted);
+
         Some((attenuation, scattered))
     }
 }
