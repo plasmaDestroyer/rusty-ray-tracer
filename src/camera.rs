@@ -3,6 +3,7 @@ use crate::color::write_color;
 use crate::hittable::Hittable;
 use crate::interval::Interval;
 use crate::ray::Ray;
+use crate::rtweekend::degrees_to_radians;
 use crate::rtweekend::random_f64;
 use crate::vec3::Point3;
 use crate::vec3::Vec3;
@@ -21,6 +22,7 @@ pub struct Camera {
     pixel00_loc: Point3,        // Location of pixel 0, 0
     pixel_delta_u: Vec3,        // Offset to pixel to the right
     pixel_delta_v: Vec3,        // Offset to pixel below
+    vfov: f64,                  // Vertical view angle (field of view)
 }
 
 impl Camera {
@@ -35,7 +37,9 @@ impl Camera {
 
         // Determine viewport dimensions.
         let focal_length = 1.0;
-        let viewport_height = 2.0;
+        let theta = degrees_to_radians(self.vfov);
+        let h = (theta / 2.0).tan();
+        let viewport_height = 2.0 * h * focal_length;
         let viewport_width =
             viewport_height * (self.image_width as f64) / (self.image_height as f64);
 
@@ -129,6 +133,7 @@ impl Default for Camera {
             pixel00_loc: Point3::default(),
             pixel_delta_u: Vec3::default(),
             pixel_delta_v: Vec3::default(),
+            vfov: 90.0,
         }
     }
 }
