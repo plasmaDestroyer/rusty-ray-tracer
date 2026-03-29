@@ -1,5 +1,3 @@
-#![allow(dead_code)]
-
 mod camera;
 mod color;
 mod hittable;

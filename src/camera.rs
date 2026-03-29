@@ -111,6 +111,8 @@ impl Camera {
     }
 
     pub fn render(&mut self, world: &(dyn Hittable + Send + Sync)) {
+        std::fs::create_dir_all("output").unwrap();
+
         self.initialize();
 
         eprintln!("Starting...");
@@ -143,7 +145,7 @@ impl Camera {
                 img.put_pixel(i as u32, j as u32, to_rgb(pixel));
             }
         }
-        img.save("images/drafts/parallel.png")
+        img.save("output/render.png")
             .unwrap_or_else(|e| eprintln!("Failed to save image: {}", e));
 
         pb.finish_and_clear();

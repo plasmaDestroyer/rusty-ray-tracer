@@ -3,6 +3,7 @@ pub struct Interval {
     pub max: f64,
 }
 
+#[allow(dead_code)]
 impl Interval {
     pub const EMPTY: Self = Self {
         min: f64::INFINITY,
