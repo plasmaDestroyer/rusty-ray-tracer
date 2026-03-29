@@ -1,5 +1,5 @@
 use crate::color::Color;
-use crate::color::write_color;
+use crate::color::to_rgb;
 use crate::hittable::Hittable;
 use crate::interval::Interval;
 use crate::ray::Ray;
@@ -10,6 +10,7 @@ use crate::vec3::Vec3;
 use crate::vec3::cross;
 use crate::vec3::random_in_unit_disk;
 use crate::vec3::unit_vector;
+use image::ImageBuffer;
 use rayon::prelude::*;
 
 pub struct Camera {
@@ -112,8 +113,12 @@ impl Camera {
     pub fn render(&mut self, world: &(dyn Hittable + Send + Sync)) {
         self.initialize();
 
-        println!("P3\n{} {}\n255\n", self.image_width, self.image_height);
+        eprintln!("Starting...");
 
+        let mut img: ImageBuffer<image::Rgb<u8>, Vec<u8>> =
+            ImageBuffer::new(self.image_width, self.image_height);
+
+        eprintln!("Working...");
         let results: Vec<Vec<Color>> = (0..self.image_height)
             .into_par_iter()
             .map(|j| {
@@ -130,13 +135,17 @@ impl Camera {
             })
             .collect();
 
-        for row in &results {
-            for pixel in row {
-                write_color(&mut std::io::stdout(), pixel);
+        for (j, row) in results.iter().enumerate() {
+            for (i, pixel) in row.iter().enumerate() {
+                img.put_pixel(i as u32, j as u32, to_rgb(pixel));
             }
         }
 
-        eprintln!("\rDone.                 ");
+        eprintln!("Saving...");
+        img.save("images/drafts/parallel.png")
+            .unwrap_or_else(|e| eprintln!("Failed to save image: {}", e));
+
+        eprintln!("Done.");
     }
 
     fn ray_color(&self, r: &Ray, depth: u32, world: &(dyn Hittable + Send + Sync)) -> Color {
