@@ -10,8 +10,7 @@ use crate::vec3::Vec3;
 use crate::vec3::cross;
 use crate::vec3::random_in_unit_disk;
 use crate::vec3::unit_vector;
-
-use std::io::Write;
+use rayon::prelude::*;
 
 pub struct Camera {
     pub aspect_ratio: f64,      // Ratio of image width over height
@@ -110,31 +109,37 @@ impl Camera {
         Vec3::new(random_f64() - 0.5, random_f64() - 0.5, 0.0)
     }
 
-    pub fn render(&mut self, world: &dyn Hittable) {
+    pub fn render(&mut self, world: &(dyn Hittable + Send + Sync)) {
         self.initialize();
 
         println!("P3\n{} {}\n255\n", self.image_width, self.image_height);
 
-        for j in 0..self.image_height {
-            eprint!("\rScanlines remaining: {} ", self.image_height - j);
-            std::io::stderr().flush().unwrap();
-            for i in 0..self.image_width {
-                let mut pixel_color = Color::new(0.0, 0.0, 0.0);
-                for _ in 0..self.samples_per_pixel {
-                    let r = self.get_ray(i, j);
-                    pixel_color += self.ray_color(&r, self.max_depth, world);
-                }
-                write_color(
-                    &mut std::io::stdout(),
-                    &(pixel_color * self.pixel_samples_scale),
-                );
+        let results: Vec<Vec<Color>> = (0..self.image_height)
+            .into_par_iter()
+            .map(|j| {
+                (0..self.image_width)
+                    .map(|i| {
+                        let mut pixel_color = Color::new(0.0, 0.0, 0.0);
+                        for _ in 0..self.samples_per_pixel {
+                            let r = self.get_ray(i, j);
+                            pixel_color += self.ray_color(&r, self.max_depth, world);
+                        }
+                        pixel_color * self.pixel_samples_scale
+                    })
+                    .collect::<Vec<Color>>()
+            })
+            .collect();
+
+        for row in &results {
+            for pixel in row {
+                write_color(&mut std::io::stdout(), pixel);
             }
         }
 
         eprintln!("\rDone.                 ");
     }
 
-    fn ray_color(&self, r: &Ray, depth: u32, world: &dyn Hittable) -> Color {
+    fn ray_color(&self, r: &Ray, depth: u32, world: &(dyn Hittable + Send + Sync)) -> Color {
         // If we've exceeded the ray bounce limit, no more light is gathered.
         if depth == 0 {
             return Color::new(0.0, 0.0, 0.0);

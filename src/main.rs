@@ -18,15 +18,15 @@ use material::{Dielectric, Lambertian, Material, Metal};
 use rtweekend::random_f64;
 use rtweekend::random_f64_range;
 use sphere::Sphere;
-use std::rc::Rc;
+use std::sync::Arc;
 use vec3::Point3;
 use vec3::Vec3;
 
 fn main() {
     let mut world = HittableList::new();
 
-    let ground_material = Rc::new(Lambertian::new(Color::new(0.5, 0.5, 0.5)));
-    world.add(Rc::new(Sphere::new(
+    let ground_material = Arc::new(Lambertian::new(Color::new(0.5, 0.5, 0.5)));
+    world.add(Arc::new(Sphere::new(
         &Point3::new(0.0, -1000.0, 0.0),
         1000.0,
         ground_material,
@@ -45,38 +45,38 @@ fn main() {
                 let sphere_material = if choose_mat < 0.8 {
                     // diffuse
                     let albedo = Color::random() * Color::random();
-                    Rc::new(Lambertian::new(albedo)) as Rc<dyn Material>
+                    Arc::new(Lambertian::new(albedo)) as Arc<dyn Material + Send + Sync>
                 } else if choose_mat < 0.95 {
                     // metal
                     let albedo = Color::random_range(0.5, 1.0);
                     let fuzz = random_f64_range(0.0, 0.5);
-                    Rc::new(Metal::new(albedo, fuzz)) as Rc<dyn Material>
+                    Arc::new(Metal::new(albedo, fuzz)) as Arc<dyn Material + Send + Sync>
                 } else {
                     // glass
-                    Rc::new(Dielectric::new(1.5)) as Rc<dyn Material>
+                    Arc::new(Dielectric::new(1.5)) as Arc<dyn Material + Send + Sync>
                 };
 
-                world.add(Rc::new(Sphere::new(&center, 0.2, sphere_material)));
+                world.add(Arc::new(Sphere::new(&center, 0.2, sphere_material)));
             }
         }
     }
 
-    let material1 = Rc::new(Dielectric::new(1.5));
-    world.add(Rc::new(Sphere::new(
+    let material1 = Arc::new(Dielectric::new(1.5));
+    world.add(Arc::new(Sphere::new(
         &Point3::new(0.0, 1.0, 0.0),
         1.0,
         material1,
     )));
 
-    let material2 = Rc::new(Lambertian::new(Color::new(0.4, 0.2, 0.1)));
-    world.add(Rc::new(Sphere::new(
+    let material2 = Arc::new(Lambertian::new(Color::new(0.4, 0.2, 0.1)));
+    world.add(Arc::new(Sphere::new(
         &Point3::new(-4.0, 1.0, 0.0),
         1.0,
         material2,
     )));
 
-    let material3 = Rc::new(Metal::new(Color::new(0.7, 0.6, 0.5), 0.0));
-    world.add(Rc::new(Sphere::new(
+    let material3 = Arc::new(Metal::new(Color::new(0.7, 0.6, 0.5), 0.0));
+    world.add(Arc::new(Sphere::new(
         &Point3::new(4.0, 1.0, 0.0),
         1.0,
         material3,
@@ -85,7 +85,7 @@ fn main() {
     let mut cam = Camera::default();
     cam.aspect_ratio = 16.0 / 9.0;
     cam.image_width = 1200;
-    cam.samples_per_pixel = 500;
+    cam.samples_per_pixel = 50;
     cam.max_depth = 50;
 
     cam.vfov = 20.0;
