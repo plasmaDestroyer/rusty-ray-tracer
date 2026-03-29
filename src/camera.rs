@@ -119,10 +119,11 @@ impl Camera {
             ImageBuffer::new(self.image_width, self.image_height);
 
         eprintln!("Working...");
+        let pb = indicatif::ProgressBar::new(self.image_height as u64);
         let results: Vec<Vec<Color>> = (0..self.image_height)
             .into_par_iter()
             .map(|j| {
-                (0..self.image_width)
+                let row = (0..self.image_width)
                     .map(|i| {
                         let mut pixel_color = Color::new(0.0, 0.0, 0.0);
                         for _ in 0..self.samples_per_pixel {
@@ -131,7 +132,9 @@ impl Camera {
                         }
                         pixel_color * self.pixel_samples_scale
                     })
-                    .collect::<Vec<Color>>()
+                    .collect::<Vec<Color>>();
+                pb.inc(1);
+                row
             })
             .collect();
 
@@ -140,11 +143,10 @@ impl Camera {
                 img.put_pixel(i as u32, j as u32, to_rgb(pixel));
             }
         }
-
-        eprintln!("Saving...");
         img.save("images/drafts/parallel.png")
             .unwrap_or_else(|e| eprintln!("Failed to save image: {}", e));
 
+        pb.finish_and_clear();
         eprintln!("Done.");
     }
 
